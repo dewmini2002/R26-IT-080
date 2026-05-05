@@ -1,6 +1,9 @@
 from fastapi import APIRouter, UploadFile, File
 from app.modules.egg.models.egg_classifier import predict_egg
 from app.modules.egg.services.egg_scenarios import SCENARIOS
+from fastapi import Form
+from app.modules.egg.services.egg_decision_engine import evaluate_scenario
+import json
 
 router = APIRouter()
 
@@ -20,3 +23,14 @@ async def start_analysis(image: UploadFile = File(...)):
         "confidence": ai_result["confidence"],
         "questions": scenario_data.get("questions", [])
     }
+
+@router.post("/complete-analysis")
+async def complete_analysis(
+    scenario: str = Form(...),
+    answers: str = Form(...)
+):
+    answers_dict = json.loads(answers)
+
+    result = evaluate_scenario(scenario, answers_dict)
+
+    return result
