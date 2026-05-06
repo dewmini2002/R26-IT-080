@@ -1,179 +1,185 @@
 SCENARIOS = {
+
+    # 🟢 HEALTHY
     "healthy": {
-        "label": "Healthy Eggs",
         "questions": [
             {
-                "id": "hours_since_spawn",
-                "text": "How many hours ago did spawning occur?",
+                "key": "hours",
+                "question": "How many hours ago did spawning occur?",
                 "options": ["<12", "12-24", "24-48", "48-72", ">72"]
             },
             {
-                "id": "fanning",
-                "text": "Are both parents actively fanning the eggs?",
+                "key": "fanning",
+                "question": "Are both parents actively fanning the eggs?",
                 "options": ["both", "one", "none"]
             },
             {
-                "id": "temperature",
-                "text": "What is the current water temperature?",
+                "key": "temperature",
+                "question": "What is the current water temperature?",
                 "options": ["<26", "26-28", "28-30", "30-31", ">31"]
             },
             {
-                "id": "disturbance",
-                "text": "Have there been disturbances near the tank?",
-                "options": ["none", "once", "2-3", "many"]
+                "key": "disturbance",
+                "question": "Have there been disturbances near the tank?",
+                "options": ["none", "once", "few", "many"]
             },
             {
-                "id": "temp_stability",
-                "text": "Has the temperature been stable?",
-                "options": ["stable", "minor", "major"]
+                "key": "temp_stability",
+                "question": "Has the temperature been stable?",
+                "options": ["stable", "minor", "unstable"]
             },
             {
-                "id": "lighting",
-                "text": "What is the lighting condition?",
-                "options": ["dim", "normal", "bright"]
+                "key": "lighting",
+                "question": "What is the lighting condition?",
+                "options": ["dark", "normal", "bright"]
             },
             {
-                "id": "white_eggs",
-                "text": "Are there white eggs visible?",
-                "options": ["none", "1-5", "some"]
+                "key": "white_percentage",
+                "question": "Are white eggs visible?",
+                "options": ["none", "<20", "20-50", ">50"]
             }
         ]
     },
 
+    # 🔴 UNHEALTHY
     "unhealthy": {
-        "label": "Unhealthy Eggs",
         "questions": [
             {
-                "id": "hours_since_spawn",
-                "text": "How many hours ago did spawning occur?",
+                "key": "hours",
+                "question": "How many hours ago did spawning occur?",
                 "options": ["<12", "12-24", "24-48", "48-72", ">72"]
             },
             {
-                "id": "white_percentage",
-                "text": "What percentage of eggs are white?",
+                "key": "white_percentage",
+                "question": "What percentage of eggs are white/opaque?",
                 "options": ["<20", "20-50", "50-80", ">80"]
             },
             {
-                "id": "parents",
-                "text": "Are parents attending the eggs?",
+                "key": "parents",
+                "question": "Are parents attending the eggs?",
                 "options": ["both", "one", "none"]
             },
             {
-                "id": "first_spawn",
-                "text": "Is this first spawn?",
-                "options": ["yes", "successful_before", "failed_before"]
+                "key": "first_spawn",
+                "question": "Is this the first spawn?",
+                "options": ["yes", "no"]
             },
             {
-                "id": "disturbance",
-                "text": "Any disturbances?",
+                "key": "disturbance",
+                "question": "Were there disturbances?",
                 "options": ["none", "once", "multiple"]
             },
             {
-                "id": "temp_stability",
-                "text": "Temperature stability?",
-                "options": ["stable", "minor", "major"]
+                "key": "temp_stability",
+                "question": "Has temperature been stable?",
+                "options": ["stable", "minor", "unstable"]
             },
             {
-                "id": "temperature",
-                "text": "Current temperature?",
+                "key": "temperature",
+                "question": "What is current temperature?",
                 "options": ["<26", "26-28", "28-30", ">30"]
             },
             {
-                "id": "pattern",
-                "text": "Where are white eggs located?",
-                "options": ["corner", "scattered", "center_spread"]
+                "key": "distribution",
+                "question": "How are white eggs distributed?",
+                "options": ["localized", "scattered", "center_spread"]
             }
         ]
     },
 
+    # 🟡 MIXED
     "mixed": {
-        "label": "Mixed Clutch",
         "questions": [
             {
-                "id": "hours",
-                "text": "How many hours since spawning?",
+                "key": "hours",
+                "question": "How many hours ago did spawning occur?",
                 "options": ["<12", "12-24", "24-48", "48-72"]
             },
             {
-                "id": "trend",
-                "text": "Are white eggs increasing?",
-                "options": ["first_time", "same", "increasing", "decreasing"]
+                "key": "trend",
+                "question": "Are white eggs increasing?",
+                "options": ["increasing", "same", "decreasing"]
             },
             {
-                "id": "percentage",
-                "text": "White egg percentage?",
+                "key": "white_percentage",
+                "question": "What percentage is white now?",
                 "options": ["<20", "20-40", "40-60", ">60"]
             },
             {
-                "id": "removal",
-                "text": "Are parents removing bad eggs?",
-                "options": ["active", "sometimes", "none"]
+                "key": "removal",
+                "question": "Are parents removing white eggs?",
+                "options": ["yes", "sometimes", "no"]
             },
             {
-                "id": "fanning",
-                "text": "Are parents fanning?",
+                "key": "fanning",
+                "question": "Are parents fanning eggs?",
                 "options": ["both", "one", "none"]
             },
             {
-                "id": "fungus",
-                "text": "Any fuzzy growth?",
+                "key": "fuzzy",
+                "question": "Any fuzzy growth visible?",
                 "options": ["no", "yes"]
             },
             {
-                "id": "temperature",
-                "text": "Temperature?",
+                "key": "temperature",
+                "question": "What is current temperature?",
                 "options": ["<28", "28-30", ">30"]
             },
             {
-                "id": "disturbance",
-                "text": "Disturbances?",
+                "key": "disturbance",
+                "question": "Were there disturbances?",
                 "options": ["none", "yes"]
             }
         ]
     },
 
+    # 🟠 FUNGAL
     "fungal": {
-        "label": "Fungal Infection",
         "questions": [
             {
-                "id": "hours",
-                "text": "When did fungal appear?",
+                "key": "hours",
+                "question": "How many hours ago did spawning occur?",
                 "options": ["<24", "24-48", "48-72", ">72"]
             },
             {
-                "id": "spread",
-                "text": "How much affected?",
+                "key": "spread",
+                "question": "What percentage is affected by fungus?",
                 "options": ["<10", "10-30", "30-60", ">60"]
             },
             {
-                "id": "parents",
-                "text": "Are parents present?",
+                "key": "parents",
+                "question": "Are parents attending eggs?",
                 "options": ["both", "one", "none"]
             },
             {
-                "id": "healthy_left",
-                "text": "Healthy eggs remaining?",
+                "key": "healthy_remaining",
+                "question": "Are healthy eggs still visible?",
                 "options": ["many", "few", "none"]
             },
             {
-                "id": "treatment",
-                "text": "Any antifungal treatment?",
+                "key": "treatment",
+                "question": "Has antifungal treatment been applied?",
                 "options": ["no", "yes", "not_working"]
             },
             {
-                "id": "temperature",
-                "text": "Temperature?",
+                "key": "temperature",
+                "question": "What is current temperature?",
                 "options": ["<26", "26-28", "28-30", ">30"]
             },
             {
-                "id": "water_flow",
-                "text": "Water movement?",
-                "options": ["good", "aeration_only", "poor"]
+                "key": "aeration",
+                "question": "Water flow/aeration condition?",
+                "options": ["good", "moderate", "low"]
             },
             {
-                "id": "cause",
-                "text": "Recent disturbance/water change?",
+                "key": "disturbance",
+                "question": "Any disturbance or water change?",
                 "options": ["none", "disturbance", "water_change"]
+            },
+            {
+                "key": "fuzzy",
+                "question": "Is fungal fuzz clearly visible?",
+                "options": ["yes", "no"]
             }
         ]
     }
