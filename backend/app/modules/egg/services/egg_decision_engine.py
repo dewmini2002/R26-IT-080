@@ -9,83 +9,149 @@ def evaluate_scenario(scenario: str, answers: dict):
         "confidence_explanation": ""
     }
 
+    risk_score = 0
+    override = None
+
     # -------------------------------
-    # HEALTHY SCENARIO
+    # GLOBAL CROSS-LOGIC (OVERRIDE)
     # -------------------------------
+
+    # Detect fungal override
+    if answers.get("fuzzy") == "yes":
+        override = "fungal"
+        result["reason_trace"].append("Fuzzy growth detected → fungal override")
+
+    # Detect abandonment
+    if answers.get("parents") == "none":
+        risk_score += 3
+        result["risk_factors"].append("parental abandonment")
+        result["reason_trace"].append("Parents abandoned eggs")
+
+    # -------------------------------
+    # APPLY OVERRIDE
+    # -------------------------------
+    if override:
+        scenario = override
+        result["condition"] = override
+
+    # -------------------------------
+    # SCENARIO LOGIC
+    # -------------------------------
+
+    # HEALTHY
     if scenario == "healthy":
         if answers.get("fanning") == "none":
-            result["severity"] = "HIGH"
-            result["explanation"] = "Eggs appear healthy but fanning has stopped."
-            result["actions"].append("Ensure both parents resume fanning immediately.")
-            result["risk_factors"].append("oxygen deprivation")
-            result["reason_trace"].append("No fanning detected")
+            risk_score += 3
+            result["reason_trace"].append("No fanning → oxygen risk")
 
-        elif answers.get("lighting") == "bright":
-            result["severity"] = "MEDIUM"
-            result["explanation"] = "Bright lighting may suppress hatching."
-            result["actions"].append("Reduce tank lighting.")
-            result["risk_factors"].append("light stress")
-            result["reason_trace"].append("Bright light condition")
+        if answers.get("lighting") == "bright":
+            risk_score += 1
+            result["reason_trace"].append("Bright light stress")
 
-        else:
-            result["severity"] = "LOW"
-            result["explanation"] = "Conditions are optimal for healthy egg development."
-            result["actions"].append("Continue monitoring without disturbance.")
-            result["reason_trace"].append("All parameters normal")
+        if answers.get("temp_stability") == "unstable":
+            risk_score += 2
+            result["reason_trace"].append("Temperature fluctuation")
 
-    # -------------------------------
-    # UNHEALTHY SCENARIO
-    # -------------------------------
+    #UNHEALTHY
     elif scenario == "unhealthy":
-        if answers.get("white_percentage") == ">80" and answers.get("parents") == "none":
-            result["severity"] = "CRITICAL"
-            result["explanation"] = "Clutch has failed due to abandonment and high egg mortality."
-            result["actions"].append("Remove eggs to prevent infection spread.")
-            result["actions"].append("Prepare tank for next spawning cycle.")
-            result["risk_factors"].append("complete clutch loss")
-            result["reason_trace"].append("High mortality + no parental care")
+        white_pct = answers.get("white_percentage")
 
-        else:
-            result["severity"] = "MEDIUM"
-            result["explanation"] = "Partial egg viability loss detected."
-            result["actions"].append("Monitor closely and reduce disturbances.")
-            result["reason_trace"].append("Moderate egg mortality")
+        if white_pct == ">80":
+            risk_score += 4
+            result["reason_trace"].append("High mortality (>80%)")
 
-    # -------------------------------
-    # MIXED SCENARIO
-    # -------------------------------
+        elif white_pct == "50-80":
+            risk_score += 2
+            result["reason_trace"].append("Moderate mortality")
+
+        if answers.get("first_spawn") == "yes":
+            risk_score -= 1
+            result["reason_trace"].append("First spawn → normal mortality")
+
+    #MIXED
     elif scenario == "mixed":
         if answers.get("trend") == "increasing":
-            result["severity"] = "HIGH"
-            result["explanation"] = "White eggs are increasing, indicating declining clutch health."
-            result["actions"].append("Inspect for fungal spread.")
-            result["risk_factors"].append("spreading mortality")
-            result["reason_trace"].append("Increasing white egg trend")
+            risk_score += 3
+            result["reason_trace"].append("White eggs increasing")
 
-        else:
-            result["severity"] = "LOW"
-            result["explanation"] = "Mixed clutch but stable condition."
-            result["actions"].append("Allow parents to manage eggs.")
-            result["reason_trace"].append("Stable mixed condition")
+        if answers.get("removal") == "no":
+            risk_score += 2
+            result["reason_trace"].append("Parents not removing dead eggs")
 
-    # -------------------------------
-    # FUNGAL SCENARIO
-    # -------------------------------
+        if answers.get("fanning") == "none":
+            risk_score += 3
+            result["reason_trace"].append("No fanning")
+
+    #FUNGAL
     elif scenario == "fungal":
-        if answers.get("spread") == ">60":
-            result["severity"] = "CRITICAL"
-            result["explanation"] = "Fungal infection has spread across majority of eggs."
-            result["actions"].append("Remove all eggs immediately.")
-            result["risk_factors"].append("fungal outbreak")
-            result["reason_trace"].append("High fungal spread")
+        spread = answers.get("spread")
+
+        if spread == ">60":
+            risk_score += 5
+            result["reason_trace"].append("Severe fungal spread")
+
+        elif spread == "30-60":
+            risk_score += 3
+            result["reason_trace"].append("Moderate fungal spread")
 
         else:
-            result["severity"] = "HIGH"
-            result["explanation"] = "Early fungal infection detected."
-            result["actions"].append("Apply antifungal treatment (methylene blue).")
-            result["actions"].append("Improve water circulation.")
-            result["reason_trace"].append("Initial fungal detection")
+            risk_score += 2
+            result["reason_trace"].append("Early fungal stage")
 
-    result["confidence_explanation"] = "Based on AI classification and user-provided observations."
+        if answers.get("aeration") == "low":
+            risk_score += 2
+            result["reason_trace"].append("Poor water flow")
+
+    # -------------------------------
+    # FINAL SEVERITY DECISION
+    # -------------------------------
+
+    if risk_score >= 6:
+        result["severity"] = "CRITICAL"
+    elif risk_score >= 4:
+        result["severity"] = "HIGH"
+    elif risk_score >= 2:
+        result["severity"] = "MEDIUM"
+    else:
+        result["severity"] = "LOW"
+
+    # -------------------------------
+    # ACTION GENERATION
+    # -------------------------------
+
+    if result["severity"] == "CRITICAL":
+        result["actions"] = [
+            "Remove eggs immediately",
+            "Disinfect tank",
+            "Prepare for next spawning cycle"
+        ]
+
+    elif result["severity"] == "HIGH":
+        result["actions"] = [
+            "Apply antifungal treatment",
+            "Reduce disturbances",
+            "Stabilize water conditions"
+        ]
+
+    elif result["severity"] == "MEDIUM":
+        result["actions"] = [
+            "Monitor closely",
+            "Optimize temperature and lighting"
+        ]
+
+    else:
+        result["actions"] = [
+            "Continue normal monitoring"
+        ]
+
+    # -------------------------------
+    # FINAL EXPLANATION
+    # -------------------------------
+    result["explanation"] = " | ".join(result["reason_trace"])
+
+    result["confidence_explanation"] = (
+        "Decision derived from combined AI classification and environmental observations "
+        "using rule-based risk evaluation."
+    )
 
     return result
