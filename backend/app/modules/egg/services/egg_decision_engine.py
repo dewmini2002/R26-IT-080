@@ -1,3 +1,6 @@
+from app.modules.egg.services.egg_knowledge_base import KNOWLEDGE_BASE
+
+
 def evaluate_scenario(scenario: str, answers: dict):
     result = {
         "condition": scenario,
@@ -16,12 +19,10 @@ def evaluate_scenario(scenario: str, answers: dict):
     # GLOBAL CROSS-LOGIC (OVERRIDE)
     # -------------------------------
 
-    # Detect fungal override
     if answers.get("fuzzy") == "yes":
         override = "fungal"
         result["reason_trace"].append("Fuzzy growth detected → fungal override")
 
-    # Detect abandonment
     if answers.get("parents") == "none":
         risk_score += 3
         result["risk_factors"].append("parental abandonment")
@@ -30,6 +31,7 @@ def evaluate_scenario(scenario: str, answers: dict):
     # -------------------------------
     # APPLY OVERRIDE
     # -------------------------------
+
     if override:
         scenario = override
         result["condition"] = override
@@ -38,7 +40,6 @@ def evaluate_scenario(scenario: str, answers: dict):
     # SCENARIO LOGIC
     # -------------------------------
 
-    # HEALTHY
     if scenario == "healthy":
         if answers.get("fanning") == "none":
             risk_score += 3
@@ -52,7 +53,6 @@ def evaluate_scenario(scenario: str, answers: dict):
             risk_score += 2
             result["reason_trace"].append("Temperature fluctuation")
 
-    #UNHEALTHY
     elif scenario == "unhealthy":
         white_pct = answers.get("white_percentage")
 
@@ -68,7 +68,6 @@ def evaluate_scenario(scenario: str, answers: dict):
             risk_score -= 1
             result["reason_trace"].append("First spawn → normal mortality")
 
-    #MIXED
     elif scenario == "mixed":
         if answers.get("trend") == "increasing":
             risk_score += 3
@@ -82,7 +81,6 @@ def evaluate_scenario(scenario: str, answers: dict):
             risk_score += 3
             result["reason_trace"].append("No fanning")
 
-    #FUNGAL
     elif scenario == "fungal":
         spread = answers.get("spread")
 
@@ -145,9 +143,51 @@ def evaluate_scenario(scenario: str, answers: dict):
         ]
 
     # -------------------------------
-    # FINAL EXPLANATION
+    # EXPLAINABLE AI (FIXED)
     # -------------------------------
-    result["explanation"] = " | ".join(result["reason_trace"])
+
+    explanations = []
+
+    for reason in result["reason_trace"]:
+        r = reason.lower()
+
+        if "fanning" in r:
+            kb = KNOWLEDGE_BASE["no_fanning"]
+
+        elif "light" in r:
+            kb = KNOWLEDGE_BASE["bright_light"]
+
+        elif "temperature" in r:
+            kb = KNOWLEDGE_BASE["temp_fluctuation"]
+
+        elif "mortality" in r:
+            kb = KNOWLEDGE_BASE["high_mortality"]
+
+        elif "fungal" in r:
+            kb = KNOWLEDGE_BASE["fungal_growth"]
+
+        elif "aeration" in r:
+            kb = KNOWLEDGE_BASE["low_aeration"]
+
+        elif "increasing" in r:
+            kb = KNOWLEDGE_BASE["increasing_white"]
+
+        else:
+            kb = None
+
+        if kb:
+            explanations.append(f"{kb['explanation']} ({kb['source']})")
+
+    if not explanations:
+        explanations.append(
+            "Decision based on combined environmental and behavioral indicators."
+        )
+
+    result["explanation"] = " | ".join(explanations)
+
+    # -------------------------------
+    # CONFIDENCE
+    # -------------------------------
 
     result["confidence_explanation"] = (
         "Decision derived from combined AI classification and environmental observations "
