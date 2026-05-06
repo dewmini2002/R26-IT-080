@@ -1,9 +1,16 @@
 from app.modules.egg.services.egg_knowledge_base import KNOWLEDGE_BASE
 
 
-def evaluate_scenario(probabilities: dict, answers: dict):
+def evaluate_scenario(probabilities: dict, answers: dict, context):
     # -------------------------------
-    # SELECT BASE SCENARIO FROM CNN
+    # CONTEXT
+    # -------------------------------
+    hours = context.hours_since_spawn
+    temperature = context.temperature
+    tds = context.tds
+
+    # -------------------------------
+    # BASE SCENARIO FROM CNN
     # -------------------------------
     scenario = max(probabilities, key=probabilities.get)
     confidence = probabilities[scenario]
@@ -22,37 +29,71 @@ def evaluate_scenario(probabilities: dict, answers: dict):
     risk_score = 0
 
     # -------------------------------
+    # 🧠 BIOLOGICAL CONSTRAINTS
+    # -------------------------------
+
+    if hours < 6:
+        if scenario == "fungal":
+            scenario = "unhealthy"
+            result["condition"] = "unhealthy"
+            result["reason_trace"].append(
+                "Fungus biologically impossible at early stage → corrected"
+            )
+
+    if hours > 72 and scenario == "healthy":
+        risk_score += 2
+        result["reason_trace"].append(
+            "Eggs overdue for hatching → potential hidden failure"
+        )
+
+    # -------------------------------
     # GLOBAL LOGIC
     # -------------------------------
 
     if answers.get("fuzzy") == "yes":
         scenario = "fungal"
         result["condition"] = "fungal"
-        result["reason_trace"].append("Fuzzy growth detected → fungal override")
+        risk_score += 3
+        result["reason_trace"].append("Fungal growth detected (override)")
 
     if answers.get("parents") == "none":
         risk_score += 3
         result["risk_factors"].append("parental abandonment")
         result["reason_trace"].append("Parents abandoned eggs")
 
+    if answers.get("fanning") == "none":
+        risk_score += 3
+        result["reason_trace"].append("No fanning → oxygen deprivation risk")
+
     # -------------------------------
-    # SCENARIO RULES
+    # ENVIRONMENTAL CHECKS
     # -------------------------------
 
-    if scenario == "healthy":
-        if answers.get("fanning") == "none":
-            risk_score += 3
-            result["reason_trace"].append("No fanning → oxygen risk")
+    if temperature < 28:
+        risk_score += 1
+        result["reason_trace"].append("Suboptimal temperature (slow development)")
 
-        if answers.get("lighting") == "bright":
-            risk_score += 1
-            result["reason_trace"].append("Bright light stress")
+    if temperature > 30:
+        risk_score += 1
+        result["reason_trace"].append("High temperature stress")
 
-        if answers.get("temp_stability") == "unstable":
-            risk_score += 2
-            result["reason_trace"].append("Temperature fluctuation")
+    if tds > 100:
+        risk_score += 2
+        result["reason_trace"].append("High water hardness may affect fertilization")
 
-    elif scenario == "unhealthy":
+    if answers.get("lighting") == "bright":
+        risk_score += 1
+        result["reason_trace"].append("Bright light stress")
+
+    if answers.get("temp_stability") == "unstable":
+        risk_score += 2
+        result["reason_trace"].append("Temperature fluctuation")
+
+    # -------------------------------
+    # SCENARIO-SPECIFIC LOGIC
+    # -------------------------------
+
+    if scenario == "unhealthy":
         white_pct = answers.get("white_percentage")
 
         if white_pct == ">80":
@@ -89,10 +130,10 @@ def evaluate_scenario(probabilities: dict, answers: dict):
 
         if answers.get("aeration") == "low":
             risk_score += 2
-            result["reason_trace"].append("Low aeration")
+            result["reason_trace"].append("Low aeration promotes fungus")
 
     # -------------------------------
-    # FUSION LOGIC (IMPORTANT)
+    # 🧠 FUSION LOGIC
     # -------------------------------
 
     final_score = risk_score + (1 - confidence) * 5
@@ -114,12 +155,13 @@ def evaluate_scenario(probabilities: dict, answers: dict):
         result["actions"] = [
             "Remove eggs immediately",
             "Disinfect tank",
-            "Prepare for next spawning"
+            "Prepare for next spawning cycle"
         ]
 
     elif result["severity"] == "HIGH":
         result["actions"] = [
             "Apply antifungal treatment",
+            "Increase aeration",
             "Stabilize environment"
         ]
 
@@ -130,10 +172,13 @@ def evaluate_scenario(probabilities: dict, answers: dict):
         ]
 
     else:
-        result["actions"] = ["Continue normal monitoring"]
+        result["actions"] = [
+            "Continue monitoring",
+            "Avoid disturbance"
+        ]
 
     # -------------------------------
-    # EXPLANATION (XAI)
+    # 🧠 XAI EXPLANATION
     # -------------------------------
 
     explanations = []
@@ -163,13 +208,14 @@ def evaluate_scenario(probabilities: dict, answers: dict):
 
     if not explanations:
         explanations.append(
-            "Decision based on combined AI and environmental indicators."
+            "Decision based on combined biological, environmental, and AI analysis."
         )
 
     result["explanation"] = " | ".join(explanations)
 
     result["confidence_explanation"] = (
-        "Final decision combines CNN confidence with environmental risk scoring."
+        "Decision combines CNN prediction, biological constraints, "
+        "environmental conditions, and user observations."
     )
 
     return result
