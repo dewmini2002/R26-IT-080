@@ -1,14 +1,13 @@
 import random
 
+CLASSES = ["healthy", "mixed", "fungal", "unhealthy"]
+
+
 def predict_egg(image_path: str):
-    classes = ["healthy", "fungal", "mixed", "unhealthy"]
+    raw = [random.random() for _ in CLASSES]
+    total = sum(raw)
 
-    # generate random probabilities (mock)
-    probs = [random.random() for _ in classes]
-    total = sum(probs)
-    probs = [p / total for p in probs]
-
-    probabilities = dict(zip(classes, probs))
+    probabilities = {c: v / total for c, v in zip(CLASSES, raw)}
 
     prediction = max(probabilities, key=probabilities.get)
 
