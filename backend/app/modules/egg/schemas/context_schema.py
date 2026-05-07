@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 
-
 class SpawnContext(BaseModel):
-    hours_since_spawn: float
+    hours_since_spawn: int
     temperature: float
     tds: float
-    parents_present: bool
+    ph: float
+    parents_present: bool = True
