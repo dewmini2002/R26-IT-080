@@ -11,7 +11,7 @@ def evaluate_scenario(
     # STEP 1: INITIAL BASE CLASS
     # -----------------------------
     base_class = max(probabilities, key=probabilities.get)
-    confidence = probabilities[base_class]
+    base_confidence = probabilities[base_class]
 
     score = {
         "healthy": probabilities.get("healthy", 0),
@@ -20,110 +20,169 @@ def evaluate_scenario(
         "unhealthy": probabilities.get("unhealthy", 0),
     }
 
+    explanation_parts = []
+    risk_factors = []
+
+    explanation_parts.append(
+        f"Initial AI prediction suggested '{base_class}' with confidence {round(base_confidence, 2)}."
+    )
+
     # -----------------------------
     # STEP 2: USER VALIDATION BOOST
     # -----------------------------
     if answers.get("fuzzy"):
         score["fungal"] += 0.4
+        risk_factors.append("fungal_growth")
+        explanation_parts.append(
+            "Fuzzy/hairy texture detected, indicating fungal infection."
+        )
 
     if answers.get("white_eggs"):
         score["mixed"] += 0.2
         score["unhealthy"] += 0.2
+        risk_factors.append("white_eggs")
+        explanation_parts.append(
+            "Presence of white eggs suggests dead or unfertilized eggs."
+        )
 
     if answers.get("fanning") is False:
         score["unhealthy"] += 0.3
+        risk_factors.append("no_fanning")
+        explanation_parts.append(
+            "Lack of parental fanning reduces oxygen supply."
+        )
 
     if answers.get("eye_spots"):
         score["healthy"] += 0.3
+        explanation_parts.append(
+            "Eye spots detected, indicating normal embryo development."
+        )
 
     # -----------------------------
-    # STEP 3: BIOLOGICAL RULE OVERRIDE
+    # STEP 3: BIOLOGICAL CONSTRAINTS
     # -----------------------------
-    # Fungus cannot occur too early
     if context.hours_since_spawn < 6:
         score["fungal"] *= 0.2
+        explanation_parts.append(
+            "Fungus unlikely at early stage (<6 hours)."
+        )
 
-    # Eye spots only after ~36h
     if context.hours_since_spawn < 30 and answers.get("eye_spots"):
         score["healthy"] -= 0.2
+        explanation_parts.append(
+            "Eye spots unlikely before 30 hours."
+        )
+
+    if context.hours_since_spawn > 72:
+        score["unhealthy"] += 0.2
+        risk_factors.append("overdue_hatching")
+        explanation_parts.append(
+            "Eggs overdue for hatching, possible developmental failure."
+        )
 
     # -----------------------------
-    # STEP 4: FINAL CLASS DECISION
+    # STEP 4: ENVIRONMENTAL FACTORS
+    # -----------------------------
+    if context.temperature < 28:
+        score["unhealthy"] += 0.1
+        risk_factors.append("low_temp")
+        explanation_parts.append(
+            "Temperature below optimal range may slow development."
+        )
+
+    if context.temperature > 30:
+        score["unhealthy"] += 0.1
+        risk_factors.append("high_temp")
+        explanation_parts.append(
+            "High temperature may stress embryos."
+        )
+
+    if context.tds > 100:
+        score["unhealthy"] += 0.2
+        risk_factors.append("high_tds")
+        explanation_parts.append(
+            "High water hardness (TDS) may affect fertilization."
+        )
+
+    # 🔥 pH integration
+    if context.ph:
+        if context.ph > 7:
+            score["unhealthy"] += 0.2
+            risk_factors.append("high_ph")
+            explanation_parts.append(
+                "High pH may reduce fertilization success."
+            )
+        elif context.ph < 5.5:
+            score["unhealthy"] += 0.2
+            risk_factors.append("low_ph")
+            explanation_parts.append(
+                "Low pH may stress embryos."
+            )
+        elif 6.0 <= context.ph <= 6.5:
+            score["healthy"] += 0.2
+            explanation_parts.append(
+                "Optimal pH supports healthy embryo development."
+            )
+
+    # -----------------------------
+    # STEP 5: FINAL CLASS DECISION
     # -----------------------------
     final_class = max(score, key=score.get)
     final_confidence = min(score[final_class], 1.0)
 
     # -----------------------------
-    # STEP 5: SEVERITY LEVEL
+    # STEP 6: SEVERITY LEVEL
     # -----------------------------
-    if final_class == "fungal":
+    risk_score = len(risk_factors)
+
+    if final_class == "fungal" or risk_score >= 3:
         severity = "high"
-    elif final_class == "unhealthy":
-        severity = "medium"
-    elif final_class == "mixed":
+    elif final_class in ["mixed", "unhealthy"] or risk_score >= 2:
         severity = "medium"
     else:
         severity = "low"
 
     # -----------------------------
-    # STEP 6: EXPLANATION (XAI)
-    # -----------------------------
-    explanation_parts = []
-
-    explanation_parts.append(
-        f"Initial AI prediction suggested '{base_class}' with confidence {round(confidence, 2)}."
-    )
-
-    if answers.get("fuzzy"):
-        explanation_parts.append(
-            "User confirmed fuzzy/hairy eggs, which strongly indicates fungal infection."
-        )
-
-    if answers.get("white_eggs"):
-        explanation_parts.append(
-            "White eggs detected, suggesting possible unfertilized or dead eggs."
-        )
-
-    if answers.get("fanning") is False:
-        explanation_parts.append(
-            "Parents are not fanning eggs, increasing risk of oxygen deprivation."
-        )
-
-    if answers.get("eye_spots"):
-        explanation_parts.append(
-            "Eye spots detected, indicating normal embryo development."
-        )
-
-    explanation_parts.append(
-        f"Final decision adjusted to '{final_class}' after combining image analysis and environmental observations."
-    )
-
-    explanation = " ".join(explanation_parts)
-
-    # -----------------------------
-    # STEP 7: ACTION RECOMMENDATIONS
+    # STEP 7: ACTIONS
     # -----------------------------
     actions = []
 
     if final_class == "healthy":
-        actions.append("Maintain stable water parameters (29°C, low TDS).")
-        actions.append("Avoid disturbing the tank.")
-        actions.append("Ensure dim lighting at night.")
+        actions = [
+            "Maintain stable water parameters (28–30°C, low TDS, pH 6.0–6.5).",
+            "Avoid disturbing the tank.",
+            "Ensure dim lighting to reduce stress."
+        ]
 
     elif final_class == "fungal":
-        actions.append("Remove infected eggs immediately using a pipette.")
-        actions.append("Apply methylene blue to prevent spread.")
-        actions.append("Increase aeration but avoid direct bubbles on eggs.")
+        actions = [
+            "Remove infected eggs immediately.",
+            "Apply methylene blue to prevent spread.",
+            "Increase aeration carefully."
+        ]
 
     elif final_class == "mixed":
-        actions.append("Monitor closely for fungal spread.")
-        actions.append("Allow parents to remove dead eggs if active.")
-        actions.append("Manually remove white eggs if necessary.")
+        actions = [
+            "Monitor eggs closely for fungal spread.",
+            "Allow parents to remove dead eggs.",
+            "Manually remove white eggs if necessary."
+        ]
 
     elif final_class == "unhealthy":
-        actions.append("Check water parameters (pH, TDS, temperature).")
-        actions.append("Ensure parents are not stressed.")
-        actions.append("Consider separating eggs if condition worsens.")
+        actions = [
+            "Check water parameters (pH, TDS, temperature).",
+            "Ensure parents are active and not stressed.",
+            "Prepare for possible loss of clutch."
+        ]
+
+    # -----------------------------
+    # STEP 8: FINAL EXPLANATION
+    # -----------------------------
+    explanation_parts.append(
+        f"Final decision: '{final_class}' based on combined AI prediction, user observations, and environmental conditions."
+    )
+
+    explanation = " ".join(explanation_parts)
 
     # -----------------------------
     # FINAL OUTPUT
