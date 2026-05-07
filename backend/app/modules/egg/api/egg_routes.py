@@ -23,7 +23,7 @@ async def analyze(
     ai_result = predict_egg(image.filename)
 
     # -----------------------------
-    # STEP 2: Apply Constraints
+    # STEP 2: Apply Biological Constraints
     # -----------------------------
     adjusted_probs = apply_biological_constraints(
         ai_result["probabilities"], context_data
@@ -34,20 +34,24 @@ async def analyze(
     gate = confidence_gate(confidence)
 
     # -----------------------------
-    # STEP 3: Validation Questions
+    # STEP 3: Adaptive Question Logic
     # -----------------------------
-    questions = []
-    if gate["requires_validation"]:
-        predicted_class = max(adjusted_probs, key=adjusted_probs.get)
-        questions = get_validation_questions(predicted_class)
+    if gate["level"] == "low":
+        questions = get_validation_questions("full")
+
+    elif gate["level"] == "medium":
+        questions = get_validation_questions("medium")
+
+    else:  # high confidence
+        questions = get_validation_questions("light")
 
     # -----------------------------
     # STEP 4: XAI Placeholder
     # -----------------------------
     xai = {
         "heatmap_available": False,
-        "message": "Heatmap will be available after CNN integration (Grad-CAM).",
-        "focus_hint": "Check egg color, texture, and surrounding areas."
+        "message": "Heatmap will be available after CNN integration.",
+        "focus_hint": "Observe egg color (amber/white), texture, and surrounding area."
     }
 
     # -----------------------------
