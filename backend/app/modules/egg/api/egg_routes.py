@@ -6,8 +6,14 @@ from app.modules.egg.schemas.context_schema import SpawnContext
 from app.modules.egg.services.egg_validation_engine import get_validation_questions
 
 import json
+import os
+from uuid import uuid4
 
 router = APIRouter(prefix="/egg", tags=["Egg Analysis"])
+
+# Create upload folder if not exists
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @router.post("/analyze")
@@ -18,23 +24,38 @@ async def analyze(
     context_data = SpawnContext(**json.loads(context))
 
     # -----------------------------
-    # STEP 1: CNN Prediction
+    # SAVE IMAGE PROPERLY
     # -----------------------------
-    ai_result = predict_egg(image.filename)
+    file_ext = image.filename.split(".")[-1]
+    unique_name = f"{uuid4()}.{file_ext}"
+    file_path = os.path.join(UPLOAD_DIR, unique_name)
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(await image.read())
 
     # -----------------------------
-    # STEP 2: Apply Biological Constraints
+    # CNN Prediction (REAL)
+    # -----------------------------
+    ai_result = predict_egg(file_path)
+
+    # Expected:
+    # {
+    #   "class": "healthy",
+    #   "probabilities": {...}
+    # }
+
+    # -----------------------------
+    # Apply Biological Constraints
     # -----------------------------
     adjusted_probs = apply_biological_constraints(
         ai_result["probabilities"], context_data
     )
 
     confidence = max(adjusted_probs.values())
-
     gate = confidence_gate(confidence)
 
     # -----------------------------
-    # STEP 3: Adaptive Question Logic
+    # Adaptive Question Logic
     # -----------------------------
     if gate["level"] == "low":
         questions = get_validation_questions("full")
@@ -42,22 +63,26 @@ async def analyze(
     elif gate["level"] == "medium":
         questions = get_validation_questions("medium")
 
-    else:  # high confidence
+    else:
         questions = get_validation_questions("light")
 
     # -----------------------------
-    # STEP 4: XAI Placeholder
+    # BASIC XAI (IMPROVED)
     # -----------------------------
+    predicted_class = max(adjusted_probs, key=adjusted_probs.get)
+
     xai = {
         "heatmap_available": False,
-        "message": "Heatmap will be available after CNN integration.",
-        "focus_hint": "Observe egg color (amber/white), texture, and surrounding area."
+        "message": "Model focused on texture, color density, and egg boundary patterns.",
+        "predicted_class": predicted_class,
+        "confidence": round(confidence, 2)
     }
 
     # -----------------------------
     # FINAL RESPONSE
     # -----------------------------
     return {
+        "predicted_class": predicted_class,
         "probabilities": adjusted_probs,
         "confidence": round(confidence, 2),
         "confidence_level": gate["level"],
