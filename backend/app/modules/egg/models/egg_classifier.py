@@ -43,12 +43,15 @@ def predict_egg(image_path: str):
 
         with torch.no_grad():
             outputs = model(image)
-            probs = torch.softmax(outputs, dim=1)
-            confidence, predicted = torch.max(probs, 1)
+            probs = torch.softmax(outputs, dim=1)[0]
+
+        probabilities = {
+            CLASSES[i]: float(probs[i])
+            for i in range(len(CLASSES))
+        }
 
         return {
-            "class": CLASSES[predicted.item()],
-            "confidence": float(confidence.item())
+            "probabilities": probabilities
         }
 
     except Exception as e:
