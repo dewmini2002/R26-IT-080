@@ -18,7 +18,7 @@ model.fc = nn.Sequential(
 
 #path
 model.load_state_dict(
-    torch.load("backend/app/modules/egg/models/final_model_93.pth", map_location=device)
+    torch.load("app/modules/egg/models/final_model_93.pth", map_location=device)
 )
 
 model.to(device)
@@ -36,7 +36,7 @@ transform = transforms.Compose([
 ])
 
 
-def classify_egg(image_path: str):
+def predict_egg(image_path: str):
     try:
         image = Image.open(image_path).convert("RGB")
         image = transform(image).unsqueeze(0).to(device)
