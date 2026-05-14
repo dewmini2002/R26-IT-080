@@ -2,17 +2,14 @@ import os
 import shutil
 import json
 
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, Body
 
 from app.modules.egg.models.egg_classifier import predict_egg
 from app.modules.egg.services.egg_constraints import apply_biological_constraints
 from app.modules.egg.services.egg_confidence import confidence_gate
 from app.modules.egg.schemas.context_schema import SpawnContext
 from app.modules.egg.services.egg_validation_engine import get_validation_questions
-
-# 🔥 NEW (fusion engine)
 from app.modules.egg.services.egg_decision_engine import evaluate_scenario
-
 
 router = APIRouter(prefix="/egg", tags=["Egg Analysis"])
 
@@ -37,51 +34,55 @@ async def analyze(
             shutil.copyfileobj(image.file, buffer)
 
         # -----------------------------
-        # STEP 1: CNN Prediction
+        # STEP 1: CNN AI PREDICTION
         # -----------------------------
         ai_result = predict_egg(file_path)
+        print("AI RESULT:", ai_result)
 
-        # Safety check
         if "probabilities" not in ai_result:
-            return {"error": "Model did not return probabilities", "details": ai_result}
+            return {
+                "error": "MODEL_ERROR",
+                "message": "Model did not return probabilities.",
+                "details": ai_result
+            }
 
         # -----------------------------
-        # STEP 2: Biological Constraints
+        # STEP 2: BIOLOGICAL CONSTRAINTS
         # -----------------------------
         adjusted_probs = apply_biological_constraints(
-            ai_result["probabilities"], context_data
+            ai_result["probabilities"],
+            context_data
         )
 
         confidence = max(adjusted_probs.values())
         gate = confidence_gate(confidence)
 
         # -----------------------------
-        # STEP 3: Adaptive Questions
+        # STEP 2.5: INVALID / LOW-CONFIDENCE FILTER
         # -----------------------------
-        if gate["level"] == "low":
-            questions = get_validation_questions("full")
-        elif gate["level"] == "medium":
+        if gate["level"] == "invalid":
+            return {
+                "error": "INVALID_IMAGE",
+                "message": gate["message"],
+                "confidence": round(confidence, 2),
+                "confidence_level": gate["level"]
+            }
+
+        # -----------------------------
+        # STEP 3: ADAPTIVE VALIDATION QUESTIONS
+        # -----------------------------
+        if gate["level"] == "medium":
             questions = get_validation_questions("medium")
         else:
             questions = get_validation_questions("light")
 
         # -----------------------------
-        # STEP 4: XAI (placeholder)
+        # STEP 4: INITIAL FUSION ENGINE
+        # No user answers yet at this stage
         # -----------------------------
-        xai = {
-            "heatmap_available": False,
-            "message": "Heatmap will be available after CNN integration.",
-            "focus_hint": "Observe egg color, texture, surrounding area."
-        }
-
-        # -----------------------------
-        # STEP 5: 🔥 FUSION ENGINE (YOUR CORE)
-        # -----------------------------
-        answers = {}  # no user answers yet
-
         fusion_result = evaluate_scenario(
             probabilities=adjusted_probs,
-            answers=answers,
+            answers={},
             context=context_data
         )
 
@@ -95,11 +96,46 @@ async def analyze(
             "requires_validation": gate["requires_validation"],
             "confidence_message": gate["message"],
             "questions": questions,
-            "xai": xai,
 
-            # 🔥 NEW (MOST IMPORTANT PART)
+            # Initial CNN prediction
+            "ai_prediction": ai_result["predicted_class"],
+
+            # Needed later for final fusion after validation answers
+            "context": context_data.dict(),
+
+            # Initial decision before validation answers
             "final_decision": fusion_result
         }
 
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "error": "SERVER_ERROR",
+            "message": str(e)
+        }
+
+
+# ===============================
+# FINALIZE — REAL FUSION AFTER USER VALIDATION
+# ===============================
+@router.post("/finalize")
+async def finalize_decision(data: dict = Body(...)):
+    try:
+        probabilities = data["probabilities"]
+        answers = data["answers"]
+        context = SpawnContext(**data["context"])
+
+        fusion_result = evaluate_scenario(
+            probabilities=probabilities,
+            answers=answers,
+            context=context
+        )
+
+        return {
+            "final_decision": fusion_result
+        }
+
+    except Exception as e:
+        return {
+            "error": "FINALIZE_ERROR",
+            "message": str(e)
+        }

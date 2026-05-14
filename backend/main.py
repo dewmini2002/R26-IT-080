@@ -7,15 +7,14 @@ app = FastAPI(title="Discus AI System")
 # CORS (needed for React Native / frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # later restrict
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Register modules
-app.include_router(egg_router, prefix="/egg", tags=["Egg Analysis"])
-
+# FIX: NO prefix here
+app.include_router(egg_router)
 
 @app.get("/")
 def root():
