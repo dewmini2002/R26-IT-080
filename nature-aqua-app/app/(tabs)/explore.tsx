@@ -12,8 +12,7 @@ import {
   View,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
-
-const API_BASE_URL = "http://192.168.1.4:8000";
+import { API_BASE_URL } from "@/constants/api";
 
 // ── Dark aqua palette (same as home) ────────────────────────────
 const C = {

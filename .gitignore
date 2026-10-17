@@ -1,0 +1,55 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Node dependencies
+node_modules/
+
+# Expo generated files
+.expo/
+dist/
+web-build/
+
+# Generated and temporary files
+*.log
+.DS_Store
+Thumbs.db
+
+# Local editor settings
+.vscode/
+
+# Qodo local files
+.qodo/
+
+
+# Python cache files
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Dataset images - keep locally
+water_image_dataset/
+
+# Python virtual environment
+.venv/
+venv/
+
+# Environment secrets
+.env
+**/.env
+
+# Node dependencies
+node_modules/
+
+# Expo generated files
+.expo/

@@ -11,9 +11,10 @@ import {
   Dimensions,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { C } from "@/constants/theme";
 import { API_BASE_URL } from "@/constants/api";
+import { useRouter } from "expo-router";
+
 
 const { width } = Dimensions.get("window");
 
@@ -36,6 +37,16 @@ const ACTIONS = [
     gradient: ["rgba(34,211,238,0.15)", "rgba(34,211,238,0.05)"],
     iconColor: C.accent,
   },
+
+  {
+    title: "Analyze Water Image",
+    desc: "Detect water condition using AI image analysis",
+    icon: "photo-camera" as const,
+    route: "/water-image" as const,
+    gradient: ["rgba(52,211,153,0.15)", "rgba(52,211,153,0.05)"],
+    iconColor: C.green,
+  },
+
   {
     title: "View History",
     desc: "Browse past prediction records",
@@ -44,6 +55,7 @@ const ACTIONS = [
     gradient: ["rgba(167,139,250,0.15)", "rgba(167,139,250,0.05)"],
     iconColor: C.purple,
   },
+
   {
     title: "Water Care Tips",
     desc: "Expert guidance for discus care",
@@ -57,6 +69,7 @@ const ACTIONS = [
 export default function HomeScreen() {
   const router = useRouter();
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [temperature, setTemperature] = useState<number | null>(null);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -74,6 +87,29 @@ export default function HomeScreen() {
         setBackendOnline(false);
       }
     })();
+
+     // Get ESP32 temperature
+  (async () => {
+
+    try {
+
+      const tempResponse = await fetch(
+        `${API_BASE_URL}/sensor/temperature/latest`
+      );
+
+      const tempData = await tempResponse.json();
+
+      setTemperature(
+        tempData.temperature_c
+      );
+
+    } catch {
+
+      setTemperature(null);
+
+    }
+
+  })();
 
     // Entrance animations
     Animated.parallel([
@@ -250,6 +286,50 @@ export default function HomeScreen() {
         ))}
 
         {/* ── Ideal Discus Parameters ────────────────────────── */}
+        {/* ── Live ESP32 Temperature ───────────────────────── */}
+
+<View style={s.sectionHeader}>
+  <MaterialIcons 
+    name="thermostat"
+    size={18}
+    color={C.orange}
+  />
+
+  <Text style={s.sectionTitle}>
+    Live Tank Temperature
+  </Text>
+
+</View>
+
+
+<View style={s.temperatureCard}>
+
+  <MaterialIcons
+    name="device-thermostat"
+    size={35}
+    color={C.orange}
+  />
+
+  <View>
+
+    <Text style={s.temperatureValue}>
+      {temperature !== null
+        ? `${temperature} °C`
+        : "-- °C"}
+    </Text>
+
+    <Text style={s.temperatureStatus}>
+      {temperature !== null &&
+       temperature >= 28 &&
+       temperature <= 30
+        ? "Suitable for Discus"
+        : "Waiting for ESP32 sensor"}
+    </Text>
+
+  </View>
+
+</View>
+
         <View style={[s.sectionHeader, { marginTop: 28 }]}>
           <MaterialIcons name="science" size={18} color={C.accent} />
           <Text style={s.sectionTitle}>Ideal Discus Parameters</Text>
@@ -528,4 +608,49 @@ const s = StyleSheet.create({
     marginTop: 4,
     opacity: 0.6,
   },
+  temperatureCard: {
+
+  flexDirection:"row",
+
+  alignItems:"center",
+
+  gap:15,
+
+  backgroundColor:C.card,
+
+  marginHorizontal:16,
+
+  marginBottom:20,
+
+  padding:18,
+
+  borderRadius:16,
+
+  borderWidth:1,
+
+  borderColor:C.cardBorder
+
+},
+
+
+temperatureValue:{
+
+  fontSize:28,
+
+  fontWeight:"900",
+
+  color:C.orange
+
+},
+
+
+temperatureStatus:{
+
+  fontSize:12,
+
+  color:C.textMuted,
+
+  marginTop:5
+
+},
 });

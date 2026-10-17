@@ -127,7 +127,14 @@ export default function HistoryScreen() {
       ) : null}
 
       {history.map((item, index) => {
-        const riskColor = getRiskColor(item.risk_level);
+        const isImagePrediction = !!item.prediction;
+
+const riskColor = 
+  item.risk_level === "High" || item.risk_level === "High Risk"
+    ? C.red
+    : item.risk_level === "Moderate" || item.risk_level === "Moderate Risk"
+    ? C.orange
+    : C.green;
 
         return (
           <View key={index} style={styles.historyCard}>
@@ -140,12 +147,12 @@ export default function HistoryScreen() {
               >
                 <MaterialIcons
                   name={
-                    item.risk_level === "Low Risk"
-                      ? "check-circle"
-                      : item.risk_level === "Moderate Risk"
-                      ? "warning"
-                      : "error"
-                  }
+  item.risk_level === "Low Risk" || item.risk_level === "Low"
+    ? "check-circle"
+    : item.risk_level === "Moderate Risk" || item.risk_level === "Moderate"
+    ? "warning"
+    : "error"
+}
                   size={16}
                   color={riskColor}
                 />
@@ -189,13 +196,90 @@ export default function HistoryScreen() {
               </View>
             ) : null}
 
-            <View style={styles.parameterGrid}>
-              <Parameter label="pH" value={item.ph} />
-              <Parameter label="Temp" value={`${item.temperature_c}°C`} />
-              <Parameter label="NH₃" value={item.ammonia_mg_l} />
-              <Parameter label="NO₂" value={item.nitrite_mg_l} />
-              <Parameter label="NO₃" value={item.nitrate_mg_l} />
-            </View>
+            {
+isImagePrediction ? (
+
+<View>
+
+<Text style={styles.sectionTitle}>
+AI Water Image Analysis
+</Text>
+
+<Text style={styles.imagePrediction}>
+{item.prediction?.replace("_"," ").toUpperCase()}
+</Text>
+
+
+<Text style={styles.infoText}>
+Possible Cause:
+{item.reason}
+</Text>
+
+
+<Text style={styles.infoText}>
+Water Change:
+{item.water_change}
+</Text>
+
+
+<Text style={styles.infoText}>
+Next Check:
+{item.next_check}
+</Text>
+
+{
+ item.recommendations && (
+
+ <View>
+
+ <Text style={styles.sectionTitle}>
+ Recommended Actions
+ </Text>
+
+ {
+ item.recommendations
+ .split(" | ")
+ .map((rec:string,i:number)=>(
+
+ <Text 
+ key={i}
+ style={styles.infoText}
+ >
+ ✓ {rec}
+ </Text>
+
+ ))
+ }
+
+ </View>
+
+ )
+}
+
+</View>
+
+)
+
+:
+
+(
+
+<View style={styles.parameterGrid}>
+
+<Parameter label="pH" value={item.ph} />
+
+<Parameter label="Temp" value={`${item.temperature_c}°C`} />
+
+<Parameter label="NH₃" value={item.ammonia_mg_l} />
+
+<Parameter label="NO₂" value={item.nitrite_mg_l} />
+
+<Parameter label="NO₃" value={item.nitrate_mg_l} />
+
+</View>
+
+)
+}
 
             <View style={styles.timeRow}>
               <MaterialIcons name="access-time" size={14} color={C.muted} />
@@ -478,4 +562,24 @@ const styles = StyleSheet.create({
     color: C.muted,
     fontSize: 12,
   },
+  sectionTitle:{
+ color:"#ffffff",
+ fontSize:15,
+ fontWeight:"800",
+ marginBottom:10
+},
+
+imagePrediction:{
+ color:"#22d3ee",
+ fontSize:22,
+ fontWeight:"900",
+ marginBottom:10
+},
+
+infoText:{
+ color:"#cbd5e1",
+ fontSize:13,
+ lineHeight:20,
+ marginTop:6
+},
 });

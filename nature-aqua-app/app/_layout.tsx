@@ -1,9 +1,8 @@
-import { DarkTheme, ThemeProvider } from "@react-navigation/native";
+import { DarkTheme, ThemeProvider } from "expo-router";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
-// Force dark theme for the aquarium-inspired UI
 const NurtureAquaTheme = {
   ...DarkTheme,
   colors: {
@@ -23,13 +22,34 @@ export const unstable_settings = {
 export default function RootLayout() {
   return (
     <ThemeProvider value={NurtureAquaTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack
+        screenOptions={{
+          contentStyle: {
+            backgroundColor: "#0a1628",
+          },
+        }}
+      >
+        <Stack.Screen
+          name="(tabs)"
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen
+          name="water-image"
+          options={{
+            title: "Water Image Analysis",
+          }}
+        />
+
         <Stack.Screen
           name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
+          options={{
+            presentation: "modal",
+            title: "Modal",
+          }}
         />
       </Stack>
+
       <StatusBar style="light" />
     </ThemeProvider>
   );
